@@ -1,0 +1,4 @@
+language: Go
+install: "github.com/stretchr/testify/assert"
+script:
+  - go test -v
