@@ -7,6 +7,9 @@ import (
 type Client struct {
 	HTTPClient *http.Client
 
+	Host        string
+	ApiEndpoint string
+
 	ConsumerKey, AccessToken string
 }
 

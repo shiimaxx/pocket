@@ -9,10 +9,11 @@ import (
 	"net/http"
 )
 
-const (
-	HOST     = "https://getpocket.com"
-	ENDPOINT = HOST + "/v3"
-)
+type PocketClient interface {
+	Retrieve(input *RetrieveOpts) (*RetrieveOutput, error)
+	Add(url string, addOpts *AddOpts) (*AddOutput, error)
+	Modify(action *Action) (*ModifyOutput, error)
+}
 
 func NewRequest(requestPath string, jsonData []byte) (*http.Request, error) {
 	uri := ENDPOINT + requestPath
@@ -26,15 +27,17 @@ func NewRequest(requestPath string, jsonData []byte) (*http.Request, error) {
 	return req, nil
 }
 
-func NewClient(consumerKey, accessToken string) (*Client, error) {
+func NewClient(consumerKey, accessToken string) (*PocketClient, error) {
 	if len(consumerKey) == 0 {
 		return nil, errors.New("Missing ConsumerKey")
 	}
 	if len(accessToken) == 0 {
 		return nil, errors.New("Missing AccessToken")
 	}
-	return &Client{
+	return &PocketClient{
 		HTTPClient:  new(http.Client),
+		Host:        "https://getpocket.com",
+		ApiEndpoint: "/v3",
 		ConsumerKey: consumerKey,
 		AccessToken: accessToken,
 	}, nil
