@@ -4,6 +4,8 @@ import (
 	"net/http"
 )
 
+type Pocketer struct{}
+
 type Client struct {
 	HTTPClient *http.Client
 
@@ -11,6 +13,7 @@ type Client struct {
 	ApiEndpoint string
 
 	ConsumerKey, AccessToken string
+	Pocketer
 }
 
 type OauthInput struct {

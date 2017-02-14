@@ -9,15 +9,12 @@ import (
 	"net/http"
 )
 
-type PocketClient interface {
-	Retrieve(input *RetrieveOpts) (*RetrieveOutput, error)
-	Add(url string, addOpts *AddOpts) (*AddOutput, error)
-	Modify(action *Action) (*ModifyOutput, error)
+type Doer interface {
+	doRequest(req *http.Request) (*http.Response, error)
 }
 
-func NewRequest(requestPath string, jsonData []byte) (*http.Request, error) {
-	uri := ENDPOINT + requestPath
-	req, err := http.NewRequest("POST", uri, bytes.NewReader(jsonData))
+func NewRequest(requestURL string, jsonData []byte) (*http.Request, error) {
+	req, err := http.NewRequest("POST", requestURL, bytes.NewReader(jsonData))
 	if err != nil {
 		return nil, err
 	}
@@ -27,20 +24,32 @@ func NewRequest(requestPath string, jsonData []byte) (*http.Request, error) {
 	return req, nil
 }
 
-func NewClient(consumerKey, accessToken string) (*PocketClient, error) {
+func NewClient(consumerKey, accessToken string) (*Client, error) {
 	if len(consumerKey) == 0 {
 		return nil, errors.New("Missing ConsumerKey")
 	}
 	if len(accessToken) == 0 {
 		return nil, errors.New("Missing AccessToken")
 	}
-	return &PocketClient{
-		HTTPClient:  new(http.Client),
+	return &Client{
 		Host:        "https://getpocket.com",
 		ApiEndpoint: "/v3",
 		ConsumerKey: consumerKey,
 		AccessToken: accessToken,
 	}, nil
+}
+
+func (p *Pocketer) doRequest(req *http.Request) (*http.Response, error) {
+	client := new(http.Client)
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != 200 {
+		return nil, errors.New(fmt.Sprintf("HTTP status error: %s", res.StatusCode))
+	}
+	return res, nil
 }
 
 // Retrieve
@@ -74,21 +83,17 @@ func parseRetrieveOutput(res *http.Response) (*RetrieveOutput, error) {
 }
 
 func (c *Client) Retrieve(input *RetrieveOpts) (*RetrieveOutput, error) {
-	requestPath := "/get"
+	requestURL := c.Host + c.ApiEndpoint + "/get"
 	jsonData := genRetrieveInput(c.ConsumerKey, c.AccessToken, input)
 
-	req, err := NewRequest(requestPath, jsonData)
+	req, err := NewRequest(requestURL, jsonData)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.Pocketer.doRequest(req)
 	if err != nil {
 		return nil, err
-	}
-
-	if res.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("HTTP status error: %s", res.StatusCode))
 	}
 
 	return parseRetrieveOutput(res)
@@ -121,21 +126,17 @@ func parseAddOutput(res *http.Response) (*AddOutput, error) {
 }
 
 func (c *Client) Add(url string, addOpts *AddOpts) (*AddOutput, error) {
-	requestPath := "/add"
+	requestURL := c.Host + c.ApiEndpoint + "/add"
 	jsonData := genAddInput(c.ConsumerKey, c.AccessToken, url, addOpts)
 
-	req, err := NewRequest(requestPath, jsonData)
+	req, err := NewRequest(requestURL, jsonData)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.Pocketer.doRequest(req)
 	if err != nil {
 		return nil, err
-	}
-
-	if res.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("HTTP status error: %s", res.StatusCode))
 	}
 
 	return parseAddOutput(res)
@@ -170,21 +171,17 @@ func parseModifyOutput(res *http.Response) (*ModifyOutput, error) {
 }
 
 func (c *Client) Modify(action *Action) (*ModifyOutput, error) {
-	requestPath := "/send"
+	requestURL := c.Host + c.ApiEndpoint + "/send"
 	jsonData := genModifyInput(c.ConsumerKey, c.AccessToken, action)
 
-	req, err := NewRequest(requestPath, jsonData)
+	req, err := NewRequest(requestURL, jsonData)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.Pocketer.doRequest(req)
 	if err != nil {
 		return nil, err
-	}
-
-	if res.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("HTTP status error: %s", res.StatusCode))
 	}
 
 	return parseModifyOutput(res)
