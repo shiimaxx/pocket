@@ -1,6 +1,7 @@
 package pocket
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,6 +9,12 @@ import (
 
 const CONSUMER_KEY = "dummy_consumer_key"
 const ACCESS_TOKEN = "dummy_access_token"
+
+type dummyDoer struct{}
+
+func (d *dummyDoer) doRequest(req *http.Request) (string, error) {
+	return "{'item':{[See Details Below]}, 'status':1}", nil
+}
 
 func TestNewClient1(t *testing.T) {
 	c, err := NewClient(CONSUMER_KEY, ACCESS_TOKEN)
