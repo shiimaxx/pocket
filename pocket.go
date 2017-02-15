@@ -10,7 +10,7 @@ import (
 )
 
 type Doer interface {
-	doRequest(req *http.Request) (*http.Response, error)
+	doRequest(req *http.Request) (string, error)
 }
 
 func NewRequest(requestURL string, jsonData []byte) (*http.Request, error) {
@@ -39,17 +39,24 @@ func NewClient(consumerKey, accessToken string) (*Client, error) {
 	}, nil
 }
 
-func (p *Pocketer) doRequest(req *http.Request) (*http.Response, error) {
+func (p *Pocketer) doRequest(req *http.Request) (string, error) {
 	client := new(http.Client)
 	res, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("HTTP status error: %s", res.StatusCode))
+		return "", errors.New(fmt.Sprintf("HTTP status error: %s", res.StatusCode))
 	}
-	return res, nil
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
 }
 
 // Retrieve
@@ -65,16 +72,9 @@ func genRetrieveInput(consumerKey, accessToken string, input *RetrieveOpts) []by
 	return jsonData
 }
 
-func parseRetrieveOutput(res *http.Response) (*RetrieveOutput, error) {
-
-	body, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
+func parseRetrieveOutput(body string) (*RetrieveOutput, error) {
 	var retrieveOutput RetrieveOutput
-	err = json.Unmarshal([]byte(body), &retrieveOutput)
+	err := json.Unmarshal([]byte(body), &retrieveOutput)
 	if err != nil {
 		return nil, err
 	}
@@ -91,12 +91,12 @@ func (c *Client) Retrieve(input *RetrieveOpts) (*RetrieveOutput, error) {
 		return nil, err
 	}
 
-	res, err := c.Pocketer.doRequest(req)
+	body, err := c.Pocketer.doRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	return parseRetrieveOutput(res)
+	return parseRetrieveOutput(body)
 }
 
 // Add
@@ -113,15 +113,9 @@ func genAddInput(consumerKey, accessToken, url string, addOpts *AddOpts) []byte 
 	return jsonData
 }
 
-func parseAddOutput(res *http.Response) (*AddOutput, error) {
-	body, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
+func parseAddOutput(body string) (*AddOutput, error) {
 	var addOutput AddOutput
-	err = json.Unmarshal([]byte(body), &addOutput)
+	err := json.Unmarshal([]byte(body), &addOutput)
 	return &addOutput, err
 }
 
@@ -134,12 +128,12 @@ func (c *Client) Add(url string, addOpts *AddOpts) (*AddOutput, error) {
 		return nil, err
 	}
 
-	res, err := c.Pocketer.doRequest(req)
+	body, err := c.Pocketer.doRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	return parseAddOutput(res)
+	return parseAddOutput(body)
 }
 
 // Modify
@@ -155,15 +149,9 @@ func genModifyInput(consumerKey, accessToken string, action *Action) []byte {
 	return jsonData
 }
 
-func parseModifyOutput(res *http.Response) (*ModifyOutput, error) {
-	body, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
+func parseModifyOutput(body string) (*ModifyOutput, error) {
 	var modifyOutput ModifyOutput
-	err = json.Unmarshal([]byte(body), &modifyOutput)
+	err := json.Unmarshal([]byte(body), &modifyOutput)
 	if err != nil {
 		return nil, err
 	}
@@ -179,10 +167,10 @@ func (c *Client) Modify(action *Action) (*ModifyOutput, error) {
 		return nil, err
 	}
 
-	res, err := c.Pocketer.doRequest(req)
+	body, err := c.Pocketer.doRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	return parseModifyOutput(res)
+	return parseModifyOutput(body)
 }
