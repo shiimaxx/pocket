@@ -1,19 +1,14 @@
 package pocket
 
-import (
-	"net/http"
-)
-
 type Pocketer struct{}
 
 type Client struct {
-	HTTPClient *http.Client
-
 	Host        string
 	ApiEndpoint string
 
 	ConsumerKey, AccessToken string
-	Pocketer
+
+	Pocketer Doer
 }
 
 type OauthInput struct {
