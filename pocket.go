@@ -36,6 +36,7 @@ func NewClient(consumerKey, accessToken string) (*Client, error) {
 		ApiEndpoint: "/v3",
 		ConsumerKey: consumerKey,
 		AccessToken: accessToken,
+		Pocketer:    new(Pocketer),
 	}, nil
 }
 
