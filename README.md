@@ -2,7 +2,7 @@
 
 Pocket API v3 Client
 
-[![travis status](https://travis-ci.org/shiimaxx/pocket.svg?branch=master)](https://travis-ci.org/shiimaxx/pocket.svg?branch=master)
+[![travis status](https://travis-ci.org/shiimaxx/pocket.svg?branch=master)](https://travis-ci.org/shiimaxx/pocket)
 
 ## Installation
 
