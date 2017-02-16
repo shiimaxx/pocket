@@ -9,14 +9,12 @@ import (
 	"net/http"
 )
 
-const (
-	HOST     = "https://getpocket.com"
-	ENDPOINT = HOST + "/v3"
-)
+type Doer interface {
+	doRequest(req *http.Request) (string, error)
+}
 
-func NewRequest(requestPath string, jsonData []byte) (*http.Request, error) {
-	uri := ENDPOINT + requestPath
-	req, err := http.NewRequest("POST", uri, bytes.NewReader(jsonData))
+func NewRequest(requestURL string, jsonData []byte) (*http.Request, error) {
+	req, err := http.NewRequest("POST", requestURL, bytes.NewReader(jsonData))
 	if err != nil {
 		return nil, err
 	}
@@ -34,10 +32,32 @@ func NewClient(consumerKey, accessToken string) (*Client, error) {
 		return nil, errors.New("Missing AccessToken")
 	}
 	return &Client{
-		HTTPClient:  new(http.Client),
+		Host:        "https://getpocket.com",
+		ApiEndpoint: "/v3",
 		ConsumerKey: consumerKey,
 		AccessToken: accessToken,
+		Pocketer:    new(Pocketer),
 	}, nil
+}
+
+func (p *Pocketer) doRequest(req *http.Request) (string, error) {
+	client := new(http.Client)
+	res, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return "", errors.New(fmt.Sprintf("HTTP status error: %s", res.StatusCode))
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
 }
 
 // Retrieve
@@ -53,16 +73,9 @@ func genRetrieveInput(consumerKey, accessToken string, input *RetrieveOpts) []by
 	return jsonData
 }
 
-func parseRetrieveOutput(res *http.Response) (*RetrieveOutput, error) {
-
-	body, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
+func parseRetrieveOutput(body string) (*RetrieveOutput, error) {
 	var retrieveOutput RetrieveOutput
-	err = json.Unmarshal([]byte(body), &retrieveOutput)
+	err := json.Unmarshal([]byte(body), &retrieveOutput)
 	if err != nil {
 		return nil, err
 	}
@@ -71,24 +84,20 @@ func parseRetrieveOutput(res *http.Response) (*RetrieveOutput, error) {
 }
 
 func (c *Client) Retrieve(input *RetrieveOpts) (*RetrieveOutput, error) {
-	requestPath := "/get"
+	requestURL := c.Host + c.ApiEndpoint + "/get"
 	jsonData := genRetrieveInput(c.ConsumerKey, c.AccessToken, input)
 
-	req, err := NewRequest(requestPath, jsonData)
+	req, err := NewRequest(requestURL, jsonData)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := c.HTTPClient.Do(req)
+	body, err := c.Pocketer.doRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	if res.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("HTTP status error: %s", res.StatusCode))
-	}
-
-	return parseRetrieveOutput(res)
+	return parseRetrieveOutput(body)
 }
 
 // Add
@@ -105,37 +114,27 @@ func genAddInput(consumerKey, accessToken, url string, addOpts *AddOpts) []byte 
 	return jsonData
 }
 
-func parseAddOutput(res *http.Response) (*AddOutput, error) {
-	body, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
+func parseAddOutput(body string) (*AddOutput, error) {
 	var addOutput AddOutput
-	err = json.Unmarshal([]byte(body), &addOutput)
+	err := json.Unmarshal([]byte(body), &addOutput)
 	return &addOutput, err
 }
 
 func (c *Client) Add(url string, addOpts *AddOpts) (*AddOutput, error) {
-	requestPath := "/add"
+	requestURL := c.Host + c.ApiEndpoint + "/add"
 	jsonData := genAddInput(c.ConsumerKey, c.AccessToken, url, addOpts)
 
-	req, err := NewRequest(requestPath, jsonData)
+	req, err := NewRequest(requestURL, jsonData)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := c.HTTPClient.Do(req)
+	body, err := c.Pocketer.doRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	if res.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("HTTP status error: %s", res.StatusCode))
-	}
-
-	return parseAddOutput(res)
+	return parseAddOutput(body)
 }
 
 // Modify
@@ -151,15 +150,9 @@ func genModifyInput(consumerKey, accessToken string, action *Action) []byte {
 	return jsonData
 }
 
-func parseModifyOutput(res *http.Response) (*ModifyOutput, error) {
-	body, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
+func parseModifyOutput(body string) (*ModifyOutput, error) {
 	var modifyOutput ModifyOutput
-	err = json.Unmarshal([]byte(body), &modifyOutput)
+	err := json.Unmarshal([]byte(body), &modifyOutput)
 	if err != nil {
 		return nil, err
 	}
@@ -167,22 +160,18 @@ func parseModifyOutput(res *http.Response) (*ModifyOutput, error) {
 }
 
 func (c *Client) Modify(action *Action) (*ModifyOutput, error) {
-	requestPath := "/send"
+	requestURL := c.Host + c.ApiEndpoint + "/send"
 	jsonData := genModifyInput(c.ConsumerKey, c.AccessToken, action)
 
-	req, err := NewRequest(requestPath, jsonData)
+	req, err := NewRequest(requestURL, jsonData)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := c.HTTPClient.Do(req)
+	body, err := c.Pocketer.doRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	if res.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("HTTP status error: %s", res.StatusCode))
-	}
-
-	return parseModifyOutput(res)
+	return parseModifyOutput(body)
 }
