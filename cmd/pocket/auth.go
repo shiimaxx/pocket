@@ -59,6 +59,7 @@ func parseAuthorizeOutput(res *http.Response) (*pocket.AuthorizeOutput, error) {
 }
 
 func Authentication(consumerKey string) (string, error) {
+	uri := "https://getpocket.com/v3"
 	client := &http.Client{}
 	ch := make(chan struct{})
 
@@ -76,7 +77,7 @@ func Authentication(consumerKey string) (string, error) {
 	oauthRequestPath := "/oauth/request"
 	jsonData := genOauthInput(consumerKey)
 
-	req, err := pocket.NewRequest(oauthRequestPath, jsonData)
+	req, err := pocket.NewRequest(uri+oauthRequestPath, jsonData)
 	if err != nil {
 		return "", err
 	}
@@ -102,7 +103,7 @@ func Authentication(consumerKey string) (string, error) {
 	authorizeRequestPath := "/oauth/authorize"
 	jsonData = genAuthorizeInput(consumerKey, oauthOutput.Code)
 
-	req, err = pocket.NewRequest(authorizeRequestPath, jsonData)
+	req, err = pocket.NewRequest(uri+authorizeRequestPath, jsonData)
 	if err != nil {
 		return "", err
 	}
